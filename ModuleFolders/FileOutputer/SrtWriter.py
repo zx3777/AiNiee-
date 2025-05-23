@@ -2,6 +2,7 @@ from functools import partial
 from itertools import count
 from pathlib import Path
 from typing import Callable, Iterator
+import re # 导入 re 模块
 
 from ModuleFolders.Cache.CacheFile import CacheFile
 from ModuleFolders.Cache.CacheItem import CacheItem
@@ -48,10 +49,13 @@ class SrtWriter(BaseBilingualWriter, BaseTranslatedWriter):
             translation_file_path.write_text("\n\n".join(output), encoding=pre_write_metadata.encoding)
 
     def _map_to_translated_item(self, item: CacheItem):
+        translated_text = item.translated_text.strip()
+        # 替换中英文逗号和句号为空格
+        translated_text = re.sub(r'[，,。. ]', ' ', translated_text)
         block = [
             str(item.require_extra("subtitle_number")),
             item.require_extra("subtitle_time"),
-            item.translated_text.strip(),
+            translated_text, # 使用替换后的文本
             "",
         ]
         return block
@@ -59,16 +63,19 @@ class SrtWriter(BaseBilingualWriter, BaseTranslatedWriter):
     def _yield_bilingual_block(self, item: CacheItem, counter: count):
         if self._strip_text(item.source_text):
             number = next(counter)
+            # 对于双语模式，同样处理原文中的标点 (如果需要)
+            # source_text_processed = re.sub(r'[，,。. ]', ' ', item.source_text.strip())
+            # 为了保持原文的准确性，这里不对 source_text 进行标点替换，如有需要可以取消注释上方代码
             original_block = [
                 str(number),
                 item.require_extra("subtitle_time"),
-                item.source_text.strip(),
+                item.source_text.strip(), # 使用原始未处理的原文
                 "",
             ]
             yield original_block
         if self._strip_text(item.translated_text):
             number = next(counter)
-            translated_block = self._map_to_translated_item(item)
+            translated_block = self._map_to_translated_item(item) # 调用已修改的方法处理译文
             translated_block[0] = str(number)
             yield translated_block
 
