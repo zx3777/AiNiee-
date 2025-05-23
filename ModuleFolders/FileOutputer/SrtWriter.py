@@ -50,8 +50,10 @@ class SrtWriter(BaseBilingualWriter, BaseTranslatedWriter):
 
     def _map_to_translated_item(self, item: CacheItem):
         translated_text = item.translated_text.strip()
-        # 替换中英文逗号和句号为空格
-        translated_text = re.sub(r'[，,。. ]', ' ', translated_text)
+        # 将所有目标标点和空格替换为单个空格
+        translated_text = re.sub(r'[，,。.\s]+', ' ', translated_text)
+        # 去除可能因替换产生的行首和行尾多余空格 (如果re.sub的目标是' '，则不需要再次strip)
+        # translated_text = translated_text.strip() # 如果上面re.sub的目标是' '，则这行可以不需要
         block = [
             str(item.require_extra("subtitle_number")),
             item.require_extra("subtitle_time"),
@@ -64,7 +66,7 @@ class SrtWriter(BaseBilingualWriter, BaseTranslatedWriter):
         if self._strip_text(item.source_text):
             number = next(counter)
             # 对于双语模式，同样处理原文中的标点 (如果需要)
-            # source_text_processed = re.sub(r'[，,。. ]', ' ', item.source_text.strip())
+            # source_text_processed = re.sub(r'[，,。.\s]+', ' ', item.source_text.strip())
             # 为了保持原文的准确性，这里不对 source_text 进行标点替换，如有需要可以取消注释上方代码
             original_block = [
                 str(number),
