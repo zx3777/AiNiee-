@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from ModuleFolders.Cache.CacheFile import CacheFile
@@ -63,7 +64,16 @@ class SrtReader(BaseSourceReader):
         return CacheFile(items=items)
 
     def _block_to_item(self, block):
-        source_text = "\n".join(block["text"])
-        extra = {"subtitle_number": block["number"], "subtitle_time": block["time"]}
-        item = CacheItem(source_text=source_text, extra=extra)
-        return item
+    # 首先用空格连接从SRT块中解析出的文本行
+    intermediate_text = " ".join(block["text"])
+
+    # 使用正则表达式替换 <br/>, <br />, <BR/>, <BR />, 等标签为空格
+    # re.IGNORECASE 标志确保不区分大小写
+    source_text = re.sub(r'<br\s*/?>', ' ', intermediate_text, flags=re.IGNORECASE)
+
+    # （可选）清理可能由于替换产生的连续多个空格，并将它们替换为单个空格
+    source_text = re.sub(r'\s+', ' ', source_text).strip()
+
+    extra = {"subtitle_number": block["number"], "subtitle_time": block["time"]}
+    item = CacheItem(source_text=source_text, extra=extra)
+    return item
